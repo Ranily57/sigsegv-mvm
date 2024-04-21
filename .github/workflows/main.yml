@@ -3,10 +3,10 @@ name: Build sigsegv-mvm
 on:
   push:
     branches:
-      - master 
+      - master
   pull_request:
     branches:
-      - master  
+      - master
 
 jobs:
   build:
@@ -20,12 +20,15 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'  # Set up python version 3.x
+        python-version: '3.x'  # Setup python version 3.x
 
-    - name: Install Python packages
+    - name: Install Python packages and AMBuild
       run: |
         python -m pip install --upgrade pip
-        pip install ambuild
+        # Clone and install AMBuild from source
+        git clone https://github.com/alliedmodders/ambuild.git
+        cd ambuild
+        python -m pip install .
 
     - name: Install system dependencies
       run: |
