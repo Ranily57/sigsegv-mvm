@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     branches:
-      - master 
+      - master
 
 jobs:
   build-and-package:
@@ -12,6 +12,11 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Ensures the full history for all branches is available
+
+    - name: Print working directory after checkout
+      run: pwd && ls -lah
 
     - name: Set up Python 3.x
       uses: actions/setup-python@v4
@@ -23,6 +28,7 @@ jobs:
         sudo dpkg --add-architecture i386
         sudo apt-get update
         sudo apt-get install -y autoconf libtool nasm libiberty-dev:i386 libelf-dev:i386 libboost-dev:i386 libbsd-dev:i386 libunwind-dev:i386 lib32z1-dev libc6-dev-i386 linux-libc-dev:i386 g++-multilib
+        echo "Dependencies installed successfully."
 
     - name: Clone dependencies
       run: |
@@ -35,6 +41,10 @@ jobs:
         git clone https://github.com/alliedmodders/metamod-source --depth 1 -b 1.11-dev
         git clone https://github.com/alliedmodders/ambuild --depth 1
         pip install ${{ github.workspace }}/alliedmodders/ambuild
+        echo "All dependencies cloned and AMBuild installed."
+
+    - name: Print alliedmodders directory structure
+      run: ls -lah ${{ github.workspace }}/alliedmodders
 
     - name: Prepare build environment
       run: |
@@ -52,7 +62,10 @@ jobs:
         mv lua-5.4.4 lua
         cd lua
         make MYCFLAGS='-m32' MYLDFLAGS='-m32'
-        cd ../../
+        echo "Environment prepared."
+
+    - name: Print sigsegv-mvm directory structure
+      run: ls -lah ${{ github.workspace }}/sigsegv-mvm
 
     - name: Build project
       run: |
@@ -61,14 +74,17 @@ jobs:
         mkdir -p build/release
         cd build/release
         ambuild
+        echo "Project built."
 
     - name: Execute multibuild for packaging
       run: |
         cd ${{ github.workspace }}/sigsegv-mvm/build/release
         ./multibuild.sh
+        echo "Packaging completed."
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
         files: build/release/*.zip
         token: ${{ secrets.GITHUB_TOKEN }}
+        draft: true  # Set this to false to make the release public automatically
