@@ -3,22 +3,22 @@ name: Build and Release
 on:
   push:
     branches:
-      - master
+      - master 
 
 jobs:
-  build:
+  build-and-package:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Set up Git repository
+    - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up Python
+    - name: Set up Python 3.x
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
+        python-version: '3.x'  # Specify the Python version
 
-    - name: Install Dependencies
+    - name: Install system dependencies
       run: |
         sudo dpkg --add-architecture i386
         sudo apt-get update
@@ -34,7 +34,7 @@ jobs:
         git clone https://github.com/alliedmodders/hl2sdk --depth 1 -b css hl2sdk-css
         git clone https://github.com/alliedmodders/metamod-source --depth 1 -b 1.11-dev
         git clone https://github.com/alliedmodders/ambuild --depth 1
-        pip install ./ambuild
+        pip install ${{ github.workspace }}/alliedmodders/ambuild
 
     - name: Prepare build environment
       run: |
@@ -54,7 +54,7 @@ jobs:
         make MYCFLAGS='-m32' MYLDFLAGS='-m32'
         cd ../../
 
-    - name: Build Release
+    - name: Build project
       run: |
         cd ${{ github.workspace }}/sigsegv-mvm
         ./autoconfig.sh
@@ -62,14 +62,13 @@ jobs:
         cd build/release
         ambuild
 
-    - name: Package Files
+    - name: Execute multibuild for packaging
       run: |
         cd ${{ github.workspace }}/sigsegv-mvm/build/release
         ./multibuild.sh
 
-    - name: Create Release
+    - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          build/release/*.zip
+        files: build/release/*.zip
         token: ${{ secrets.GITHUB_TOKEN }}
