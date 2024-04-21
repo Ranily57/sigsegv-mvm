@@ -1,83 +1,79 @@
-name: Build sigsegv-mvm
+name: Build and Release
 
 on:
   push:
     branches:
       - master
-  pull_request:
-    branches:
-      - master
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+
     steps:
-    - name: Checkout code
+    - name: Set up Git repository
       uses: actions/checkout@v3
       with:
-        submodules: 'recursive'  # To clone submodules
+        fetch-depth: 0  # Ensure history is available for git describe, etc.
 
-    - name: Setup Python
+    - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'  # Setup python version 3.x
+        python-version: '3.x'
 
-    - name: Install Python packages and AMBuild
-      run: |
-        python -m pip install --upgrade pip
-        # Clone and install AMBuild from source
-        git clone https://github.com/alliedmodders/ambuild.git
-        cd ambuild
-        python -m pip install .
-
-    - name: Install system dependencies
+    - name: Install Dependencies
       run: |
         sudo dpkg --add-architecture i386
-        sudo apt update
-        sudo apt install -y autoconf libtool nasm libiberty-dev:i386 libelf-dev:i386 libboost-dev:i386 \
-          libbsd-dev:i386 libunwind-dev:i386 lib32z1-dev libc6-dev-i386 linux-libc-dev:i386 g++-multilib
+        sudo apt-get update
+        sudo apt-get install -y autoconf libtool nasm libiberty-dev:i386 libelf-dev:i386 libboost-dev:i386 libbsd-dev:i386 libunwind-dev:i386 lib32z1-dev libc6-dev-i386 linux-libc-dev:i386 g++-multilib
+        pip install ambuild
 
-    - name: Prepare environment
+    - name: Clone dependencies
       run: |
-        echo 'export PATH=~/.local/bin:$PATH' >> $GITHUB_ENV
-
-    - name: Clone necessary repositories
-      run: |
-        mkdir -p $HOME/alliedmodders
-        cd $HOME/alliedmodders
+        mkdir -p ${{ github.workspace }}/alliedmodders
+        cd ${{ github.workspace }}/alliedmodders
         git clone --recursive https://github.com/alliedmodders/sourcemod --depth 1 -b 1.11-dev
         git clone https://github.com/alliedmodders/hl2sdk --depth 1 -b sdk2013 hl2sdk-sdk2013
         git clone https://github.com/alliedmodders/hl2sdk --depth 1 -b tf2 hl2sdk-tf2
         git clone https://github.com/alliedmodders/hl2sdk --depth 1 -b css hl2sdk-css
         git clone https://github.com/alliedmodders/metamod-source --depth 1 -b 1.11-dev
+        git clone https://github.com/alliedmodders/ambuild --depth 1
 
-    - name: Build udis86 library
+    - name: Prepare build environment
       run: |
-        cd $HOME/alliedmodders/sigsegv-mvm/libs/udis86
+        echo "export PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
+        source $HOME/.bashrc
+        cd ${{ github.workspace }}/sigsegv-mvm
+        git submodule update --init --recursive
+        cd libs/udis86
         ./autogen.sh
         ./configure
         make
-
-    - name: Install Lua
-      run: |
-        cd $HOME/alliedmodders/sigsegv-mvm/libs
+        cd ../../libs
         wget https://www.lua.org/ftp/lua-5.4.4.tar.gz
         tar -xf lua-*.tar.gz
         rm lua-*.tar.gz
         mv lua-* lua
         cd lua
         make MYCFLAGS='-m32' MYLDFLAGS='-m32'
+        cd ../../
 
-    - name: Run build script
+    - name: Build Release
       run: |
-        cd $HOME/alliedmodders/sigsegv-mvm
+        cd ${{ github.workspace }}/sigsegv-mvm
         ./autoconfig.sh
         mkdir -p build/release
         cd build/release
         ambuild
 
-    - name: Archive artifacts
-      uses: actions/upload-artifact@v3
+    - name: Package Files
+      run: |
+        cd ${{ github.workspace }}/sigsegv-mvm/build/release
+        ./multibuild.sh
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
       with:
-        name: sigsegv-mvm-build
-        path: $HOME/alliedmodders/sigsegv-mvm/build/release/*
+        files: |
+          build/release/*.zip
+        token: ${{ secrets.GITHUB_TOKEN }}
+
