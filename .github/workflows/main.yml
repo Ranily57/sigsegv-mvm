@@ -12,8 +12,6 @@ jobs:
     steps:
     - name: Set up Git repository
       uses: actions/checkout@v3
-      with:
-        fetch-depth: 0  # Ensure history is available for git describe, etc.
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -49,9 +47,9 @@ jobs:
         make
         cd ../../libs
         wget https://www.lua.org/ftp/lua-5.4.4.tar.gz
-        tar -xf lua-*.tar.gz
-        rm lua-*.tar.gz
-        mv lua-* lua
+        tar -xf lua-5.4.4.tar.gz
+        rm lua-5.4.4.tar.gz
+        mv lua-5.4.4 lua
         cd lua
         make MYCFLAGS='-m32' MYLDFLAGS='-m32'
         cd ../../
@@ -75,4 +73,3 @@ jobs:
         files: |
           build/release/*.zip
         token: ${{ secrets.GITHUB_TOKEN }}
-
