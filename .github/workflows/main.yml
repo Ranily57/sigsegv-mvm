@@ -25,7 +25,6 @@ jobs:
         sudo dpkg --add-architecture i386
         sudo apt-get update
         sudo apt-get install -y autoconf libtool nasm libiberty-dev:i386 libelf-dev:i386 libboost-dev:i386 libbsd-dev:i386 libunwind-dev:i386 lib32z1-dev libc6-dev-i386 linux-libc-dev:i386 g++-multilib
-        pip install ambuild
 
     - name: Clone dependencies
       run: |
@@ -37,11 +36,11 @@ jobs:
         git clone https://github.com/alliedmodders/hl2sdk --depth 1 -b css hl2sdk-css
         git clone https://github.com/alliedmodders/metamod-source --depth 1 -b 1.11-dev
         git clone https://github.com/alliedmodders/ambuild --depth 1
+        pip install ./ambuild
 
     - name: Prepare build environment
       run: |
         echo "export PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
-        source $HOME/.bashrc
         cd ${{ github.workspace }}/sigsegv-mvm
         git submodule update --init --recursive
         cd libs/udis86
