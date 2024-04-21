@@ -4,21 +4,19 @@ on:
   push:
     branches:
       - master
+
 jobs:
   build-and-package:
-    runs-on: ubuntu-latest  # Use the latest Ubuntu runner
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Print root directory structure
-      run: ls -lah
-
     - name: Set up Python 3.x
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'  # Specify the Python version
+        python-version: '3.x'
 
     - name: Install system dependencies
       run: |
@@ -27,43 +25,27 @@ jobs:
         sudo apt-get install -y autoconf libtool nasm libiberty-dev:i386 libelf-dev:i386 libboost-dev:i386 libbsd-dev:i386 libunwind-dev:i386 lib32z1-dev libc6-dev-i386 linux-libc-dev:i386 g++-multilib
         echo "Dependencies installed successfully."
 
-    - name: Clone dependencies
+    - name: Clone and install AMBuild
       run: |
-        mkdir -p alliedmodders
-        cd alliedmodders
-        git clone --recursive https://github.com/alliedmodders/sourcemod --depth 1 -b 1.11-dev
-        git clone https://github.com/alliedmodders/hl2sdk --depth 1 -b sdk2013 hl2sdk-sdk2013
-        git clone https://github.com/alliedmodders/hl2sdk --depth 1 -b tf2 hl2sdk-tf2
-        git clone https://github.com/alliedmodders/hl2sdk --depth 1 -b css hl2sdk-css
-        git clone https://github.com/alliedmodders/metamod-source --depth 1 -b 1.11-dev
         git clone https://github.com/alliedmodders/ambuild --depth 1
-        pip install ./ambuild
+        cd ambuild
+        python -m pip install .
 
-    - name: Print alliedmodders directory structure
-      run: ls -lah alliedmodders
+    - name: Print Python packages and PATH
+      run: |
+        echo "Python packages:"
+        pip list
+        echo "PATH: $PATH"
+        echo "Python location: $(which python)"
+        echo "Python version: $(python --version)"
+        python -m site
 
     - name: Prepare build environment
       run: |
         echo "export PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
         git submodule update --init --recursive
-        cd libs/udis86
-        ./autogen.sh
-        ./configure
-        make
-        cd ../..
-        cd libs
-        wget https://www.lua.org/ftp/lua-5.4.4.tar.gz
-        tar -xf lua-5.4.4.tar.gz
-        rm lua-5.4.4.tar.gz
-        mv lua-5.4.4 lua
-        cd lua
-        make MYCFLAGS='-m32' MYLDFLAGS='-m32'
-        echo "Environment prepared."
 
-    - name: Print project directory structure
-      run: ls -lah
-
-    - name: Build project
+    - name: Configure and build with AMBuild
       run: |
         ./autoconfig.sh
         mkdir -p build/release
@@ -73,7 +55,6 @@ jobs:
 
     - name: Execute multibuild for packaging
       run: |
-        cd build/release
         ./multibuild.sh
         echo "Packaging completed."
 
@@ -82,4 +63,4 @@ jobs:
       with:
         files: build/release/*.zip
         token: ${{ secrets.GITHUB_TOKEN }}
-        draft: true  # Set this to false to make the release public automatically
+        draft: true
