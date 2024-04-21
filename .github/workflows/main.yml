@@ -4,19 +4,16 @@ on:
   push:
     branches:
       - master
-
 jobs:
   build-and-package:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Use the latest Ubuntu runner
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
-      with:
-        fetch-depth: 0  # Ensures the full history for all branches is available
 
-    - name: Print working directory after checkout
-      run: pwd && ls -lah
+    - name: Print root directory structure
+      run: ls -lah
 
     - name: Set up Python 3.x
       uses: actions/setup-python@v4
@@ -32,30 +29,29 @@ jobs:
 
     - name: Clone dependencies
       run: |
-        mkdir -p ${{ github.workspace }}/alliedmodders
-        cd ${{ github.workspace }}/alliedmodders
+        mkdir -p alliedmodders
+        cd alliedmodders
         git clone --recursive https://github.com/alliedmodders/sourcemod --depth 1 -b 1.11-dev
         git clone https://github.com/alliedmodders/hl2sdk --depth 1 -b sdk2013 hl2sdk-sdk2013
         git clone https://github.com/alliedmodders/hl2sdk --depth 1 -b tf2 hl2sdk-tf2
         git clone https://github.com/alliedmodders/hl2sdk --depth 1 -b css hl2sdk-css
         git clone https://github.com/alliedmodders/metamod-source --depth 1 -b 1.11-dev
         git clone https://github.com/alliedmodders/ambuild --depth 1
-        pip install ${{ github.workspace }}/alliedmodders/ambuild
-        echo "All dependencies cloned and AMBuild installed."
+        pip install ./ambuild
 
     - name: Print alliedmodders directory structure
-      run: ls -lah ${{ github.workspace }}/alliedmodders
+      run: ls -lah alliedmodders
 
     - name: Prepare build environment
       run: |
         echo "export PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
-        cd ${{ github.workspace }}/sigsegv-mvm
         git submodule update --init --recursive
         cd libs/udis86
         ./autogen.sh
         ./configure
         make
-        cd ../../libs
+        cd ../..
+        cd libs
         wget https://www.lua.org/ftp/lua-5.4.4.tar.gz
         tar -xf lua-5.4.4.tar.gz
         rm lua-5.4.4.tar.gz
@@ -64,12 +60,11 @@ jobs:
         make MYCFLAGS='-m32' MYLDFLAGS='-m32'
         echo "Environment prepared."
 
-    - name: Print sigsegv-mvm directory structure
-      run: ls -lah ${{ github.workspace }}/sigsegv-mvm
+    - name: Print project directory structure
+      run: ls -lah
 
     - name: Build project
       run: |
-        cd ${{ github.workspace }}/sigsegv-mvm
         ./autoconfig.sh
         mkdir -p build/release
         cd build/release
@@ -78,7 +73,7 @@ jobs:
 
     - name: Execute multibuild for packaging
       run: |
-        cd ${{ github.workspace }}/sigsegv-mvm/build/release
+        cd build/release
         ./multibuild.sh
         echo "Packaging completed."
 
